@@ -1,11 +1,3 @@
-import streamlit as st
-import streamlit.components.v1 as components
-
-st.set_page_config(page_title="Ninja Nhảy Núi", layout="centered")
-st.title("🥷 Ninja Nhảy Núi")
-st.markdown("**Hướng dẫn:** Nhấn phím Space để nhảy, phím ← → để di chuyển trái/phải. Cố gắng sống sót lâu nhất!")
-
-game_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,17 +43,18 @@ game_html = """
     const restartBtn = document.getElementById("restartBtn");
 
     const ninjaImg = new Image();
-    ninjaImg.src = "https://i.ibb.co/sPf1M7T/ninja.png"; // Hình ninja
+    ninjaImg.src = "https://i.imgur.com/8Qf9d8W.png"; // Ảnh ninja thay thế
 
     let ninja;
     let platforms = [];
     let score;
     let gameOver;
     let speed;
+    let keys = {};
 
     function initGame() {
       ninja = {
-        x: 200,
+        x: 180,
         y: 500,
         width: 40,
         height: 40,
@@ -115,7 +108,7 @@ game_html = """
     function checkCollision() {
       platforms.forEach(p => {
         if (
-          ninja.y + ninja.height < p.y + 5 &&
+          ninja.y + ninja.height <= p.y + 5 &&
           ninja.y + ninja.height + ninja.velocityY >= p.y &&
           ninja.x + ninja.width > p.x &&
           ninja.x < p.x + p.width
@@ -129,6 +122,10 @@ game_html = """
       if (gameOver) return;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (keys["ArrowLeft"]) ninja.velocityX = -4;
+      else if (keys["ArrowRight"]) ninja.velocityX = 4;
+      else ninja.velocityX = 0;
 
       ninja.velocityY += ninja.gravity;
       ninja.y += ninja.velocityY;
@@ -169,21 +166,16 @@ game_html = """
     }
 
     document.addEventListener("keydown", (e) => {
+      keys[e.code] = true;
       if (e.code === "Space") jump();
-      if (e.code === "ArrowLeft") ninja.velocityX = -4;
-      if (e.code === "ArrowRight") ninja.velocityX = 4;
     });
 
     document.addEventListener("keyup", (e) => {
-      if (e.code === "ArrowLeft" || e.code === "ArrowRight") ninja.velocityX = 0;
+      keys[e.code] = false;
     });
 
     canvas.addEventListener("mousedown", jump);
-
-    initGame();
+    ninjaImg.onload = () => initGame();
   </script>
 </body>
 </html>
-"""
-
-components.html(game_html, height=700)
