@@ -1,160 +1,144 @@
-import streamlit as st
-import streamlit.components.v1 as components
-
-st.set_page_config(page_title="Tâng Bóng Vượt Chướng Ngại Vật", layout="centered")
-
-st.title("🏐 Tâng Bóng Qua Chướng Ngại Vật")
-st.markdown("**Hướng dẫn:** Bấm Space hoặc nhấn chuột để tâng bóng. Đừng để bóng rơi hoặc va vào chướng ngại vật!")
-
-game_html = """
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8" />
+  <title>🎮 Game Tâng Bóng Qua Chướng Ngại Vật</title>
   <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #87ceeb, #ffffff);
+      font-family: 'Segoe UI', sans-serif;
+    }
     canvas {
-      background: linear-gradient(to bottom, #b3ecff, #e6faff);
       display: block;
       margin: auto;
-      border: 2px solid #333;
+      background: #dff9fb;
+      border: 3px solid #0984e3;
+      border-radius: 10px;
     }
-    body { text-align: center; font-family: Arial; }
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 24px;
+      color: #2d3436;
+    }
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      color: red;
+      display: none;
+    }
   </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="400" height="600"></canvas>
-<script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
+  <div id="score">Điểm: 0</div>
+  <div id="game-over">🎮 Game Over! Nhấn Space để chơi lại.</div>
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
 
-  const GRAVITY = 0.15;
-  const JUMP = -5;
-  let score = 0;
-  let gameOver = false;
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-  const ball = {
-    x: 80,
-    y: 300,
-    radius: 15,
-    velocity: 0
-  };
+    const GRAVITY = 0.15;
+    const JUMP = -6.5;
+    const MAX_FALL_SPEED = 4;
+    const OBSTACLE_WIDTH = 60;
+    const OBSTACLE_GAP = 160;
+    const OBSTACLE_SPEED = 2;
 
-  const pipes = [];
-  const pipeWidth = 60;
-  const gap = 150;
-  let frame = 0;
+    let ball = {
+      x: 80,
+      y: canvas.height / 2,
+      radius: 15,
+      velocity: 0,
+    };
 
-  function drawBall() {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#ff5722";
-    ctx.fill();
-    ctx.closePath();
-  }
+    let obstacles = [];
+    let score = 0;
+    let gameOver = false;
 
-  function drawPipes() {
-    pipes.forEach(pipe => {
-      ctx.fillStyle = "#4CAF50";
-      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-      ctx.fillRect(pipe.x, pipe.top + gap, pipeWidth, canvas.height);
-    });
-  }
-
-  function drawScore() {
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "#333";
-    ctx.fillText("Điểm: " + score, 10, 30);
-  }
-
-  function update() {
-  if (gameOver) return;
-
-  ball.velocity += GRAVITY;
-  if (ball.velocity > MAX_FALL_SPEED) {
-    ball.velocity = MAX_FALL_SPEED;
-  }
-  ball.y += ball.velocity;
-
-  // ... phần còn lại giữ nguyên
-}
-
-    // Tạo ống mới
-    if (frame % 100 === 0) {
-      const topHeight = Math.floor(Math.random() * 250) + 50;
-      pipes.push({ x: canvas.width, top: topHeight, passed: false });
-    }
-
-    // Cập nhật ống
-    pipes.forEach(pipe => {
-      pipe.x -= 3;
-
-      // Kiểm tra va chạm
-      if (
-        ball.x + ball.radius > pipe.x && ball.x - ball.radius < pipe.x + pipeWidth &&
-        (ball.y - ball.radius < pipe.top || ball.y + ball.radius > pipe.top + gap)
-      ) {
-        gameOver = true;
-      }
-
-      // Tính điểm
-      if (!pipe.passed && pipe.x + pipeWidth < ball.x) {
-        score++;
-        pipe.passed = true;
-      }
-    });
-
-    // Rơi xuống hoặc bay ra khỏi màn
-    if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
-      gameOver = true;
-    }
-
-    // Xóa ống đã đi qua
-    if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
-      pipes.shift();
-    }
-
-    draw();
-    frame++;
-    requestAnimationFrame(update);
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBall();
-    drawPipes();
-    drawScore();
-
-    if (gameOver) {
-      ctx.font = "40px Arial";
-      ctx.fillStyle = "#ff3333";
-      ctx.fillText("Game Over", 100, 300);
-    }
-  }
-
-  function jump() {
-    if (!gameOver) {
-      ball.velocity = JUMP;
-    } else {
-      // Reset game
-      ball.y = 300;
+    function resetGame() {
+      ball.y = canvas.height / 2;
       ball.velocity = 0;
-      pipes.length = 0;
+      obstacles = [];
       score = 0;
-      frame = 0;
       gameOver = false;
-      update();
+      document.getElementById("game-over").style.display = "none";
     }
-  }
 
-  document.addEventListener("keydown", (e) => {
-    if (e.code === "Space") jump();
-  });
-  canvas.addEventListener("mousedown", jump);
+    function createObstacle() {
+      const topHeight = Math.random() * (canvas.height - OBSTACLE_GAP - 100) + 50;
+      obstacles.push({
+        x: canvas.width,
+        topHeight: topHeight,
+        bottomY: topHeight + OBSTACLE_GAP,
+      });
+    }
 
-  update();
-</script>
-</body>
-</html>
-"""
+    function update() {
+      if (gameOver) return;
 
-components.html(game_html, height=650)
+      ball.velocity += GRAVITY;
+      if (ball.velocity > MAX_FALL_SPEED) {
+        ball.velocity = MAX_FALL_SPEED;
+      }
+      ball.y += ball.velocity;
+
+      // Tạo chướng ngại vật mới
+      if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 200) {
+        createObstacle();
+      }
+
+      // Cập nhật chướng ngại vật
+      for (let i = 0; i < obstacles.length; i++) {
+        obstacles[i].x -= OBSTACLE_SPEED;
+
+        // Kiểm tra vượt qua chướng ngại
+        if (!obstacles[i].passed && obstacles[i].x + OBSTACLE_WIDTH < ball.x) {
+          obstacles[i].passed = true;
+          score++;
+          document.getElementById("score").textContent = "Điểm: " + score;
+        }
+
+        // Kiểm tra va chạm
+        if (
+          ball.x + ball.radius > obstacles[i].x &&
+          ball.x - ball.radius < obstacles[i].x + OBSTACLE_WIDTH
+        ) {
+          if (
+            ball.y - ball.radius < obstacles[i].topHeight ||
+            ball.y + ball.radius > obstacles[i].bottomY
+          ) {
+            endGame();
+          }
+        }
+      }
+
+      // Xóa vật cản ngoài màn hình
+      obstacles = obstacles.filter((obs) => obs.x + OBSTACLE_WIDTH > 0);
+
+      // Va chạm sàn hoặc trần
+      if (ball.y + ball.radius >= canvas.height || ball.y - ball.radius <= 0) {
+        endGame();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Vẽ bóng
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#e17055";
+      ctx.fill();
+      ctx.closePath();
+
+      // Vẽ chướng ngại vật
+      for (let obs of obstacles) {
+        ctx.fillStyle = "#2d3436";
+        ctx.fillRect(obs.x, 0, OBSTACLE
