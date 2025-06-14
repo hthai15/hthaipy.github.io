@@ -1,12 +1,3 @@
-import streamlit as st
-import streamlit.components.v1 as components
-
-st.set_page_config(page_title="Ninja Nhảy Núi", layout="centered")
-
-st.title("🥷 Ninja Nhảy Núi")
-st.markdown("**Hướng dẫn:** Nhấn **Space** hoặc **Click chuột** để nhảy. Đừng rơi khỏi màn hình nhé!")
-
-game_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,26 +42,31 @@ game_html = """
     const ctx = canvas.getContext("2d");
     const restartBtn = document.getElementById("restartBtn");
 
+    const ninjaImg = new Image();
+    ninjaImg.src = "https://i.ibb.co/sPf1M7T/ninja.png"; // Hình ninja
+
     let ninja;
     let platforms = [];
     let score;
     let gameOver;
+    let speed;
 
     function initGame() {
       ninja = {
         x: 200,
         y: 500,
-        width: 30,
-        height: 30,
-        color: "#f44336",
+        width: 40,
+        height: 40,
         velocityY: 0,
-        jumpPower: -10,
-        gravity: 0.5
+        jumpPower: -12,
+        gravity: 0.5,
+        velocityX: 0
       };
 
       platforms = [];
       score = 0;
       gameOver = false;
+      speed = 2;
 
       for (let i = 0; i < 6; i++) {
         platforms.push({
@@ -86,8 +82,7 @@ game_html = """
     }
 
     function drawNinja() {
-      ctx.fillStyle = ninja.color;
-      ctx.fillRect(ninja.x, ninja.y, ninja.width, ninja.height);
+      ctx.drawImage(ninjaImg, ninja.x, ninja.y, ninja.width, ninja.height);
     }
 
     function drawPlatforms() {
@@ -99,11 +94,12 @@ game_html = """
 
     function updatePlatforms() {
       platforms.forEach(p => {
-        p.y += 2;
+        p.y += speed;
         if (p.y > canvas.height) {
           p.y = 0;
           p.x = Math.random() * 300;
           score++;
+          if (score % 5 === 0) speed += 0.5; // Tăng tốc độ
         }
       });
     }
@@ -128,6 +124,10 @@ game_html = """
 
       ninja.velocityY += ninja.gravity;
       ninja.y += ninja.velocityY;
+      ninja.x += ninja.velocityX;
+
+      if (ninja.x < 0) ninja.x = 0;
+      if (ninja.x + ninja.width > canvas.width) ninja.x = canvas.width - ninja.width;
 
       updatePlatforms();
       checkCollision();
@@ -162,13 +162,17 @@ game_html = """
 
     document.addEventListener("keydown", (e) => {
       if (e.code === "Space") jump();
+      if (e.code === "ArrowLeft") ninja.velocityX = -4;
+      if (e.code === "ArrowRight") ninja.velocityX = 4;
     });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "ArrowRight") ninja.velocityX = 0;
+    });
+
     canvas.addEventListener("mousedown", jump);
 
     initGame();
   </script>
 </body>
 </html>
-"""
-
-components.html(game_html, height=700)
