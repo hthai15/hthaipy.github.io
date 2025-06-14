@@ -53,7 +53,7 @@ with price_cols[2]:
     st.write("- Tuỳ chỉnh theo yêu cầu")
     st.write("- Hệ thống back-end riêng")
     st.write("- Hỗ trợ mở rộng")
-    st.success("Giá: Liên hệ")
+    st.success("Giá: Liên hệ : 0816157172")
 
 st.markdown("---")
 
