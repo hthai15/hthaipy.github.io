@@ -123,7 +123,7 @@ game_html = """
         ctx.font = "36px Arial";
         ctx.fillText("Game Over", 100, 300);
         ctx.font = "20px Arial";
-        ctx.fillText("F5 để chơi lại", 130, 340);
+        ctx.fillText(" 5 để chơi lại", 130, 340);
       }
 
       if (!gameOver) requestAnimationFrame(update);
