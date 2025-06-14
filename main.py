@@ -26,34 +26,52 @@ game_html = """
       font-family: Arial, sans-serif;
       text-align: center;
     }
-    h1 {
-      margin-top: 10px;
+    #restartBtn {
+      display: none;
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #restartBtn:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <button id="restartBtn" onclick="restartGame()">🔁 Chơi lại</button>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const restartBtn = document.getElementById("restartBtn");
 
-    const ninja = {
-      x: 200,
-      y: 500,
-      width: 30,
-      height: 30,
-      color: "#f44336",
-      velocityY: 0,
-      jumpPower: -10,
-      gravity: 0.5
-    };
-
+    let ninja;
     let platforms = [];
-    let score = 0;
-    let gameOver = false;
+    let score;
+    let gameOver;
 
-    function createPlatforms() {
+    function initGame() {
+      ninja = {
+        x: 200,
+        y: 500,
+        width: 30,
+        height: 30,
+        color: "#f44336",
+        velocityY: 0,
+        jumpPower: -10,
+        gravity: 0.5
+      };
+
+      platforms = [];
+      score = 0;
+      gameOver = false;
+
       for (let i = 0; i < 6; i++) {
         platforms.push({
           x: Math.random() * 300,
@@ -62,6 +80,9 @@ game_html = """
           height: 10
         });
       }
+
+      restartBtn.style.display = "none";
+      update();
     }
 
     function drawNinja() {
@@ -122,11 +143,11 @@ game_html = """
         ctx.fillStyle = "#ff3333";
         ctx.font = "36px Arial";
         ctx.fillText("Game Over", 100, 300);
-        ctx.font = "20px Arial";
-        ctx.fillText(" 5 để chơi lại", 130, 340);
+        restartBtn.style.display = "inline-block";
+        return;
       }
 
-      if (!gameOver) requestAnimationFrame(update);
+      requestAnimationFrame(update);
     }
 
     function jump() {
@@ -135,16 +156,19 @@ game_html = """
       }
     }
 
+    function restartGame() {
+      initGame();
+    }
+
     document.addEventListener("keydown", (e) => {
       if (e.code === "Space") jump();
     });
     canvas.addEventListener("mousedown", jump);
 
-    createPlatforms();
-    update();
+    initGame();
   </script>
 </body>
 </html>
 """
 
-components.html(game_html, height=650)
+components.html(game_html, height=700)
