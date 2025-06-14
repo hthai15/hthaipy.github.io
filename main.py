@@ -1,94 +1,149 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Game Tưng Bóng", layout="centered")
+st.set_page_config(page_title="Tâng Bóng Vượt Chướng Ngại Vật", layout="centered")
 
-st.title("🏀 Trò chơi Tưng Bóng")
-st.markdown("**Hướng dẫn:** Dùng các phím ← và → để điều khiển bóng. Đừng để bóng rơi ra ngoài!")
+st.title("🏐 Tâng Bóng Qua Chướng Ngại Vật")
+st.markdown("**Hướng dẫn:** Bấm Space hoặc nhấn chuột để tâng bóng. Đừng để bóng rơi hoặc va vào chướng ngại vật!")
 
 game_html = """
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <style>
     canvas {
-      background: #eef;
+      background: linear-gradient(to bottom, #b3ecff, #e6faff);
       display: block;
-      margin: 0 auto;
-      border: 2px solid #444;
+      margin: auto;
+      border: 2px solid #333;
     }
-    body {
-      text-align: center;
-      font-family: sans-serif;
-    }
+    body { text-align: center; font-family: Arial; }
   </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="400" height="500"></canvas>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  let ball = {
-    x: 200,
-    y: 100,
-    radius: 20,
-    vx: 2,
-    vy: 0,
-    gravity: 0.5,
-    bounce: -0.7
+  const GRAVITY = 0.5;
+  const JUMP = -10;
+  let score = 0;
+  let gameOver = false;
+
+  const ball = {
+    x: 80,
+    y: 300,
+    radius: 15,
+    velocity: 0
   };
 
-  let score = 0;
+  const pipes = [];
+  const pipeWidth = 60;
+  const gap = 150;
+  let frame = 0;
 
   function drawBall() {
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#FF5722";
+    ctx.fillStyle = "#ff5722";
     ctx.fill();
     ctx.closePath();
   }
 
+  function drawPipes() {
+    pipes.forEach(pipe => {
+      ctx.fillStyle = "#4CAF50";
+      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+      ctx.fillRect(pipe.x, pipe.top + gap, pipeWidth, canvas.height);
+    });
+  }
+
   function drawScore() {
-    ctx.font = "18px Arial";
+    ctx.font = "20px Arial";
     ctx.fillStyle = "#333";
-    ctx.fillText("Điểm: " + score, 10, 20);
+    ctx.fillText("Điểm: " + score, 10, 30);
   }
 
   function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (gameOver) return;
 
-    ball.vy += ball.gravity;
-    ball.y += ball.vy;
-    ball.x += ball.vx;
+    ball.velocity += GRAVITY;
+    ball.y += ball.velocity;
 
-    // Tường trái/phải
-    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
-      ball.vx = -ball.vx;
+    // Tạo ống mới
+    if (frame % 100 === 0) {
+      const topHeight = Math.floor(Math.random() * 250) + 50;
+      pipes.push({ x: canvas.width, top: topHeight, passed: false });
     }
 
-    // Nền
-    if (ball.y + ball.radius > canvas.height) {
-      ball.y = canvas.height - ball.radius;
-      ball.vy *= ball.bounce;
-      score += 1;
+    // Cập nhật ống
+    pipes.forEach(pipe => {
+      pipe.x -= 2;
+
+      // Kiểm tra va chạm
+      if (
+        ball.x + ball.radius > pipe.x && ball.x - ball.radius < pipe.x + pipeWidth &&
+        (ball.y - ball.radius < pipe.top || ball.y + ball.radius > pipe.top + gap)
+      ) {
+        gameOver = true;
+      }
+
+      // Tính điểm
+      if (!pipe.passed && pipe.x + pipeWidth < ball.x) {
+        score++;
+        pipe.passed = true;
+      }
+    });
+
+    // Rơi xuống hoặc bay ra khỏi màn
+    if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+      gameOver = true;
     }
 
-    drawBall();
-    drawScore();
+    // Xóa ống đã đi qua
+    if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
+      pipes.shift();
+    }
+
+    draw();
+    frame++;
     requestAnimationFrame(update);
   }
 
-  // Điều khiển phím
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "ArrowLeft") {
-      ball.vx -= 1;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBall();
+    drawPipes();
+    drawScore();
+
+    if (gameOver) {
+      ctx.font = "40px Arial";
+      ctx.fillStyle = "#ff3333";
+      ctx.fillText("Game Over", 100, 300);
     }
-    if (e.key === "ArrowRight") {
-      ball.vx += 1;
+  }
+
+  function jump() {
+    if (!gameOver) {
+      ball.velocity = JUMP;
+    } else {
+      // Reset game
+      ball.y = 300;
+      ball.velocity = 0;
+      pipes.length = 0;
+      score = 0;
+      frame = 0;
+      gameOver = false;
+      update();
     }
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space") jump();
   });
+  canvas.addEventListener("mousedown", jump);
 
   update();
 </script>
@@ -96,5 +151,4 @@ game_html = """
 </html>
 """
 
-# Nhúng HTML game
-components.html(game_html, height=550)
+components.html(game_html, height=650)
