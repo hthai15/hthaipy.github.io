@@ -27,8 +27,8 @@ game_html = """
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  const GRAVITY = 0.25;
-  const JUMP = -8;
+  const GRAVITY = 0.15;
+  const JUMP = -5;
   let score = 0;
   let gameOver = false;
 
@@ -80,7 +80,7 @@ game_html = """
 
     // Cập nhật ống
     pipes.forEach(pipe => {
-      pipe.x -= 2;
+      pipe.x -= 3;
 
       // Kiểm tra va chạm
       if (
