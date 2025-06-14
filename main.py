@@ -67,10 +67,16 @@ game_html = """
   }
 
   function update() {
-    if (gameOver) return;
+  if (gameOver) return;
 
-    ball.velocity += GRAVITY;
-    ball.y += ball.velocity;
+  ball.velocity += GRAVITY;
+  if (ball.velocity > MAX_FALL_SPEED) {
+    ball.velocity = MAX_FALL_SPEED;
+  }
+  ball.y += ball.velocity;
+
+  // ... phần còn lại giữ nguyên
+}
 
     // Tạo ống mới
     if (frame % 100 === 0) {
