@@ -141,4 +141,37 @@
       // Vẽ chướng ngại vật
       for (let obs of obstacles) {
         ctx.fillStyle = "#2d3436";
-        ctx.fillRect(obs.x, 0, OBSTACLE
+        ctx.fillRect(obs.x, 0, OBSTACLE_WIDTH, obs.topHeight);
+        ctx.fillRect(obs.x, obs.bottomY, OBSTACLE_WIDTH, canvas.height - obs.bottomY);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function jump() {
+      if (!gameOver) {
+        ball.velocity = JUMP;
+      } else {
+        resetGame();
+      }
+    }
+
+    function endGame() {
+      gameOver = true;
+      document.getElementById("game-over").style.display = "block";
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.code === "Space") {
+        jump();
+      }
+    });
+
+    loop();
+  </script>
+</body>
+</html>
