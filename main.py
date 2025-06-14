@@ -27,8 +27,8 @@ game_html = """
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  const GRAVITY = 0.5;
-  const JUMP = -10;
+  const GRAVITY = 0.25;
+  const JUMP = -8;
   let score = 0;
   let gameOver = false;
 
