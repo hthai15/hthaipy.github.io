@@ -1,3 +1,11 @@
+import streamlit as st
+import streamlit.components.v1 as components
+
+st.set_page_config(page_title="Ninja Nhảy Núi", layout="centered")
+st.title("🥷 Ninja Nhảy Núi")
+st.markdown("**Hướng dẫn:** Nhấn phím Space để nhảy, phím ← → để di chuyển trái/phải. Cố gắng sống sót lâu nhất!")
+
+game_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,7 +107,7 @@
           p.y = 0;
           p.x = Math.random() * 300;
           score++;
-          if (score % 5 === 0) speed += 0.5; // Tăng tốc độ
+          if (score % 5 === 0) speed += 0.5;
         }
       });
     }
@@ -176,3 +184,6 @@
   </script>
 </body>
 </html>
+"""
+
+components.html(game_html, height=700)
