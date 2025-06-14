@@ -1,90 +1,76 @@
 import streamlit as st
-import streamlit.components.v1 as components
-import random
 
-st.set_page_config(layout="wide")
-st.title("🔫 Game Bắn Súng Có Súng!")
+# Cấu hình trang
+st.set_page_config(page_title="Bán Bot Lập Trình", layout="wide")
 
-if "score" not in st.session_state:
-    st.session_state.score = 0
+# Tiêu đề trang
+st.markdown("<h1 style='text-align:center; color:#4A90E2;'>🤖 Bán Bot Lập Trình Tự Động</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Chúng tôi cung cấp các bot thông minh cho lập trình, tự động hóa và xử lý công việc!</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-# HTML/JS Game Canvas
-game_html = f"""
-<canvas id="gameCanvas" width="600" height="400" style="border:1px solid #000;"></canvas>
-<p>Điểm: <span id="score">{st.session_state.score}</span></p>
+# Giới thiệu sản phẩm
+st.subheader("🛍️ Sản phẩm nổi bật")
+cols = st.columns(3)
 
-<script>
-let canvas = document.getElementById("gameCanvas");
-let ctx = canvas.getContext("2d");
+with cols[0]:
+    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712027.png", width=100)
+    st.markdown("### Bot ChatGPT API")
+    st.write("Trả lời tự động, xử lý ngôn ngữ tự nhiên, tích hợp website, Facebook.")
+    
+with cols[1]:
+    st.image("https://cdn-icons-png.flaticon.com/512/5587/5587464.png", width=100)
+    st.markdown("### Bot Telegram Tự Động")
+    st.write("Gửi tin nhắn, trả lời lệnh, truy xuất dữ liệu, quản lý nhóm.")
 
-let gunImg = new Image();
-gunImg.src = "gun.png"; // bạn cần ảnh này trong cùng thư mục hoặc đổi sang URL
+with cols[2]:
+    st.image("https://cdn-icons-png.flaticon.com/512/2311/2311524.png", width=100)
+    st.markdown("### Bot Discord Developer")
+    st.write("Auto mod, game mini, phản hồi theo lệnh, tích hợp AI/ML.")
 
-let targetImg = new Image();
-targetImg.src = "target.png"; // tương tự
+st.markdown("---")
 
-let gunX = 250;
-let gunY = 340;
+# Bảng giá
+st.subheader("💰 Bảng Giá Gói Dịch Vụ")
 
-let targetX = Math.floor(Math.random() * 540) + 30;
-let targetY = 30;
+price_cols = st.columns(3)
 
-let bulletX = null;
-let bulletY = null;
+with price_cols[0]:
+    st.markdown("### 🟢 Basic")
+    st.write("- 1 nền tảng (Telegram hoặc Discord)")
+    st.write("- Xử lý lệnh cơ bản")
+    st.write("- Hỗ trợ 24/7")
+    st.success("Giá: 499.000 VNĐ")
 
-function draw() {{
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+with price_cols[1]:
+    st.markdown("### 🟡 Pro")
+    st.write("- 2 nền tảng")
+    st.write("- ChatGPT tích hợp")
+    st.write("- Lưu dữ liệu & báo cáo")
+    st.success("Giá: 999.000 VNĐ")
 
-    // Vẽ súng
-    ctx.drawImage(gunImg, gunX, gunY, 60, 60);
+with price_cols[2]:
+    st.markdown("### 🔴 Enterprise")
+    st.write("- Tuỳ chỉnh theo yêu cầu")
+    st.write("- Hệ thống back-end riêng")
+    st.write("- Hỗ trợ mở rộng")
+    st.success("Giá: Liên hệ")
 
-    // Vẽ mục tiêu
-    ctx.drawImage(targetImg, targetX, targetY, 50, 50);
+st.markdown("---")
 
-    // Vẽ đạn
-    if (bulletY !== null) {{
-        ctx.beginPath();
-        ctx.arc(bulletX, bulletY, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = "black";
-        ctx.fill();
-        bulletY -= 5;
+# Form liên hệ
+st.subheader("📬 Liên hệ đặt hàng hoặc yêu cầu riêng")
 
-        // Kiểm tra trúng mục tiêu
-        if (
-            bulletX >= targetX && bulletX <= targetX + 50 &&
-            bulletY >= targetY && bulletY <= targetY + 50
-        ) {{
-            document.getElementById("score").innerText = parseInt(document.getElementById("score").innerText) + 1;
-            bulletY = null;
-            targetX = Math.floor(Math.random() * 540) + 30;
-            targetY = 30;
-        }}
+with st.form("contact_form"):
+    name = st.text_input("Họ tên")
+    email = st.text_input("Email")
+    need = st.text_area("Yêu cầu của bạn")
 
-        // Nếu đạn ra khỏi màn
-        if (bulletY < 0) {{
-            bulletY = null;
-        }}
-    }}
+    submitted = st.form_submit_button("Gửi yêu cầu")
+    if submitted:
+        if name and email and need:
+            st.success("✅ Yêu cầu đã được gửi! Chúng tôi sẽ liên hệ bạn sớm.")
+        else:
+            st.error("❗ Vui lòng điền đầy đủ thông tin.")
 
-    requestAnimationFrame(draw);
-}}
-
-canvas.addEventListener("mousemove", function(e) {{
-    let rect = canvas.getBoundingClientRect();
-    gunX = e.clientX - rect.left - 30;
-}});
-
-canvas.addEventListener("click", function() {{
-    if (bulletY === null) {{
-        bulletX = gunX + 30;
-        bulletY = gunY;
-    }}
-}});
-
-gunImg.onload = function() {{
-    draw();
-}};
-</script>
-"""
-
-components.html(game_html, height=500)
+st.markdown("---")
+st.markdown("<p style='text-align:center'>© 2025 Bán Bot Lập Trình. All rights reserved.</p>", unsafe_allow_html=True)
