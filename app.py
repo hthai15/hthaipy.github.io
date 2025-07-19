@@ -3,6 +3,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -10,7 +11,6 @@ import numpy as np
 
 st.set_page_config(page_title="🛒 Supermarket Sales Forecast", layout="wide")
 
-# Load CSV
 @st.cache_data
 def load_data():
     df = pd.read_csv("supermarket_sales_forecast_sample.csv")
@@ -19,9 +19,8 @@ def load_data():
 
 df = load_data()
 
-# Title
 st.title("🛒 Supermarket Sales Forecasting App")
-st.write("Visualize supermarket sales and forecast future values using machine learning.")
+st.write("Visualize supermarket sales and forecast values using machine learning models.")
 
 # =======================
 # 📊 Section: Visualizations
@@ -80,9 +79,9 @@ ax8.set_title("8️⃣ Correlation Matrix")
 st.pyplot(fig8)
 
 # ========================
-# 📈 Section: Forecasting
+# 📈 Section: Forecasting Models
 # ========================
-st.subheader("📈 Sales Forecasting Using Random Forest")
+st.subheader("📈 Forecasting Models")
 
 # One-hot encoding
 encoder = OneHotEncoder(sparse_output=False, drop='first')
@@ -98,32 +97,82 @@ X = df_final.drop(columns='sales')
 y = df_final['sales']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Train model
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+# Model 1: Random Forest
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+rf_pred = rf.predict(X_test)
+rf_mae = mean_absolute_error(y_test, rf_pred)
+rf_rmse = np.sqrt(mean_squared_error(y_test, rf_pred))
+rf_r2 = r2_score(y_test, rf_pred)
 
-# Predict
-y_pred = model.predict(X_test)
+# Model 2: Linear Regression
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+lr_pred = lr.predict(X_test)
+lr_mae = mean_absolute_error(y_test, lr_pred)
+lr_rmse = np.sqrt(mean_squared_error(y_test, lr_pred))
+lr_r2 = r2_score(y_test, lr_pred)
 
-# Evaluation metrics
-mae = mean_absolute_error(y_test, y_pred)
-rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-r2 = r2_score(y_test, y_pred)
+# Metrics
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("#### 🌲 Random Forest")
+    st.write(f"**MAE:** {rf_mae:.2f}")
+    st.write(f"**RMSE:** {rf_rmse:.2f}")
+    st.write(f"**R²:** {rf_r2:.2f}")
+with col2:
+    st.markdown("#### 📈 Linear Regression")
+    st.write(f"**MAE:** {lr_mae:.2f}")
+    st.write(f"**RMSE:** {lr_rmse:.2f}")
+    st.write(f"**R²:** {lr_r2:.2f}")
 
-# Display results
-st.markdown("### 🧮 Evaluation Metrics")
-st.markdown(f"- **MAE (Mean Absolute Error):** `{mae:.2f}`")
-st.markdown(f"- **RMSE (Root Mean Squared Error):** `{rmse:.2f}`")
-st.markdown(f"- **R² Score:** `{r2:.2f}`")
+# Comparison plots
+tab1, tab2 = st.tabs(["Random Forest", "Linear Regression"])
 
-# Prediction scatter plot
-fig9, ax9 = plt.subplots()
-sns.scatterplot(x=y_test, y=y_pred, alpha=0.6, ax=ax9)
-ax9.plot([y.min(), y.max()], [y.min(), y.max()], '--r')
-ax9.set_xlabel("Actual Sales")
-ax9.set_ylabel("Predicted Sales")
-ax9.set_title("📌 Actual vs Predicted Sales")
-st.pyplot(fig9)
+with tab1:
+    fig_rf, ax_rf = plt.subplots()
+    sns.scatterplot(x=y_test, y=rf_pred, alpha=0.6, ax=ax_rf)
+    ax_rf.plot([y.min(), y.max()], [y.min(), y.max()], '--r')
+    ax_rf.set_title("Random Forest: Actual vs Predicted")
+    st.pyplot(fig_rf)
 
-# Final note
-st.success("✅ Forecasting Complete! You can improve model performance by tuning parameters or trying other algorithms.")
+with tab2:
+    fig_lr, ax_lr = plt.subplots()
+    sns.scatterplot(x=y_test, y=lr_pred, alpha=0.6, ax=ax_lr)
+    ax_lr.plot([y.min(), y.max()], [y.min(), y.max()], '--r')
+    ax_lr.set_title("Linear Regression: Actual vs Predicted")
+    st.pyplot(fig_lr)
+
+# ========================
+# 🔮 Predict New Input
+# ========================
+st.subheader("🔮 Try Forecasting with Custom Input")
+
+col1, col2 = st.columns(2)
+with col1:
+    price = st.number_input("Product Price", min_value=0.0, value=20.0)
+    promotion = st.selectbox("Promotion Applied?", [0, 1])
+    holiday = st.selectbox("Is Holiday?", [0, 1])
+with col2:
+    region = st.selectbox("Region", df['region'].unique())
+    category = st.selectbox("Category", df['category'].unique())
+    revenue = st.number_input("Expected Revenue", min_value=0.0, value=5000.0)
+
+# Encoding manual input
+region_options = list(df['region'].unique())
+category_options = list(df['category'].unique())
+
+region_encoded = [1 if region == r else 0 for r in region_options[1:]]
+category_encoded = [1 if category == c else 0 for c in category_options[1:]]
+
+input_features = [[price, revenue, promotion, holiday] + region_encoded + category_encoded]
+
+# Choose model
+model_choice = st.radio("Choose model for prediction", ["Random Forest", "Linear Regression"])
+
+if model_choice == "Random Forest":
+    pred_value = rf.predict(input_features)[0]
+else:
+    pred_value = lr.predict(input_features)[0]
+
+st.success(f"📈 **Predicted Sales:** {pred_value:.2f} units")
