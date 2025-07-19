@@ -1,5 +1,5 @@
 streamlit
 pandas
-scikit-learn
-seaborn
+scikit-learn>=0.22
 matplotlib
+seaborn
