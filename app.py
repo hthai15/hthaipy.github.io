@@ -144,7 +144,7 @@ with tab2:
     st.pyplot(fig_lr)
 
 # ========================
-# 🔮 Predict New Input
+# 🔮 Predict New Input (Fixed)
 # ========================
 st.subheader("🔮 Try Forecasting with Custom Input")
 
@@ -158,21 +158,34 @@ with col2:
     category = st.selectbox("Category", df['category'].unique())
     revenue = st.number_input("Expected Revenue", min_value=0.0, value=5000.0)
 
-# Encoding manual input
-region_options = list(df['region'].unique())
-category_options = list(df['category'].unique())
+# Create DataFrame for one new row
+input_dict = {
+    'price': [price],
+    'revenue': [revenue],
+    'promotion': [promotion],
+    'holiday': [holiday],
+    'region': [region],
+    'category': [category]
+}
+input_df = pd.DataFrame(input_dict)
 
-region_encoded = [1 if region == r else 0 for r in region_options[1:]]
-category_encoded = [1 if category == c else 0 for c in category_options[1:]]
+# One-hot encode region and category (same encoder used earlier)
+encoded_input = encoder.transform(input_df[['region', 'category']])
+encoded_input_df = pd.DataFrame(encoded_input, columns=encoder.get_feature_names_out(['region', 'category']))
 
-input_features = [[price, revenue, promotion, holiday] + region_encoded + category_encoded]
+# Combine with numeric features
+numeric_features = input_df[['price', 'revenue', 'promotion', 'holiday']].reset_index(drop=True)
+full_input = pd.concat([numeric_features, encoded_input_df], axis=1)
+
+# Ensure correct column order
+full_input = full_input[X_train.columns]  # Match model's training features
 
 # Choose model
 model_choice = st.radio("Choose model for prediction", ["Random Forest", "Linear Regression"])
 
 if model_choice == "Random Forest":
-    pred_value = rf.predict(input_features)[0]
+    pred_value = rf.predict(full_input)[0]
 else:
-    pred_value = lr.predict(input_features)[0]
+    pred_value = lr.predict(full_input)[0]
 
 st.success(f"📈 **Predicted Sales:** {pred_value:.2f} units")
