@@ -108,7 +108,6 @@ with col2:
     category = st.selectbox("Category", df['category'].unique())
     revenue = st.number_input("Expected Revenue", value=5000.0)
 
-# Encode inputs
 region_code = le_region.transform([region])[0]
 category_code = le_category.transform([category])[0]
 
