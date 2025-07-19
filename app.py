@@ -1,100 +1,81 @@
-import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
-from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import numpy as np
 
-st.set_page_config(page_title="Weekly Sales Forecast", layout="wide")
+# UI title
+st.title("🛒 Supermarket Sales Forecasting App")
+st.write("This app visualizes sales data and predicts sales using a machine learning model.")
 
-# Load dataset
-@st.cache_data
-def load_data():
-    df = pd.read_csv("sales_weekly_data.csv")
-    df['Date'] = pd.to_datetime(df['Date'])
-    df['Promotion'] = df['Promotion'].map({'Yes': 1, 'No': 0})
-    df['Holiday'] = df['Holiday'].map({'Yes': 1, 'No': 0})
-    df['Week'] = df['Date'].dt.to_period('W').apply(lambda r: r.start_time)
-    return df
+# Upload file
+uploaded_file = st.file_uploader("Upload your sales CSV file", type=["csv"])
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    df['week'] = pd.to_datetime(df['week'])
 
-df = load_data()
+    st.subheader("Raw Data")
+    st.dataframe(df.head())
 
-# Aggregate weekly
-weekly_df = df.groupby('Week').agg({
-    'Sales': 'sum',
-    'Promotion': 'mean',
-    'Holiday': 'mean'
-}).reset_index()
+    # ---- Visualization ----
+    st.subheader("📊 Visualizations")
 
-st.title("📊 Weekly Sales Forecasting App")
+    # Chart 1: Total sales per week
+    sales_by_week = df.groupby('week')['sales'].sum().reset_index()
+    fig1, ax1 = plt.subplots(figsize=(10,4))
+    sns.lineplot(data=sales_by_week, x='week', y='sales', ax=ax1)
+    ax1.set_title("Total Sales by Week")
+    st.pyplot(fig1)
 
-# Show raw data
-with st.expander("🔍 View Raw Weekly Data"):
-    st.dataframe(weekly_df)
+    # Chart 2: Sales by category
+    fig2, ax2 = plt.subplots()
+    sns.barplot(data=df, x='category', y='sales', estimator=sum, ci=None, ax=ax2)
+    ax2.set_title("Total Sales by Category")
+    ax2.tick_params(axis='x', rotation=45)
+    st.pyplot(fig2)
 
-# ------------------------ Charts ------------------------
-st.subheader("📈 Data Visualization")
+    # Chart 3: Correlation Heatmap
+    fig3, ax3 = plt.subplots()
+    corr = df[['sales', 'price', 'revenue', 'promotion', 'holiday']].corr()
+    sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax3)
+    st.pyplot(fig3)
 
-# Line chart: Sales over time
-fig1, ax1 = plt.subplots()
-sns.lineplot(data=weekly_df, x='Week', y='Sales', marker='o', ax=ax1)
-plt.xticks(rotation=45)
-ax1.set_title("Weekly Sales Over Time")
-st.pyplot(fig1)
+    # ---- Model Section ----
+    st.subheader("📈 Sales Prediction (Random Forest)")
 
-# Correlation heatmap
-fig2, ax2 = plt.subplots()
-sns.heatmap(weekly_df.corr(), annot=True, cmap="coolwarm", ax=ax2)
-ax2.set_title("Correlation Heatmap")
-st.pyplot(fig2)
+    # One-hot encode
+    encoder = OneHotEncoder(sparse_output=False, drop='first')
+    encoded = encoder.fit_transform(df[['region', 'category']])
+    encoded_df = pd.DataFrame(encoded, columns=encoder.get_feature_names_out(['region', 'category']))
 
-# Sales vs Promotion
-fig3, ax3 = plt.subplots()
-sns.scatterplot(data=weekly_df, x='Promotion', y='Sales', ax=ax3)
-ax3.set_title("Sales vs Promotion")
-st.pyplot(fig3)
+    df_model = df.drop(columns=['week', 'product_id', 'region', 'category'])
+    df_final = pd.concat([df_model.reset_index(drop=True), encoded_df.reset_index(drop=True)], axis=1)
 
-# Sales vs Holiday
-fig4, ax4 = plt.subplots()
-sns.boxplot(x='Holiday', y='Sales', data=weekly_df, ax=ax4)
-ax4.set_title("Sales by Holiday/Non-Holiday")
-ax4.set_xticklabels(['No Holiday', 'Holiday'])
-st.pyplot(fig4)
+    # Model pipeline
+    X = df_final.drop(columns='sales')
+    y = df_final['sales']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# ------------------------ Modeling ------------------------
-st.subheader("🤖 Predict Weekly Sales")
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-# Features and target
-X = weekly_df[['Promotion', 'Holiday']]
-y = weekly_df['Sales']
+    # Evaluation
+    st.write(f"**MAE:** {mean_absolute_error(y_test, y_pred):.2f}")
+    st.write(f"**RMSE:** {mean_squared_error(y_test, y_pred, squared=False):.2f}")
+    st.write(f"**R² Score:** {r2_score(y_test, y_pred):.2f}")
 
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Train model
-model = LinearRegression()
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-# Evaluation
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-st.write(f"**✅ R² Score:** {r2:.2f}")
-st.write(f"**📉 Mean Squared Error (MSE):** {mse:.2f}")
-
-# Show actual vs predicted
-st.markdown("#### 🔄 Actual vs Predicted Sales")
-result_df = pd.DataFrame({'Actual Sales': y_test, 'Predicted Sales': y_pred})
-st.dataframe(result_df.reset_index(drop=True))
-
-# ------------------------ User Input ------------------------
-st.subheader("📊 Try Your Own Prediction")
-
-promo_input = st.slider("Promotion Rate (%)", 0, 100, 50) / 100
-holiday_input = st.radio("Is it a Holiday Week?", ['No', 'Yes'])
-holiday_val = 1 if holiday_input == 'Yes' else 0
-
-user_pred = model.predict([[promo_input, holiday_val]])
-st.success(f"📈 Predicted Weekly Sales: **${user_pred[0]:,.2f}**")
+    # Scatter plot
+    fig4, ax4 = plt.subplots()
+    sns.scatterplot(x=y_test, y=y_pred, alpha=0.6, ax=ax4)
+    ax4.plot([y.min(), y.max()], [y.min(), y.max()], '--r')
+    ax4.set_xlabel('Actual Sales')
+    ax4.set_ylabel('Predicted Sales')
+    ax4.set_title("Actual vs Predicted Sales")
+    st.pyplot(fig4)
+else:
+    st.info("👈 Please upload a CSV file to continue.")
