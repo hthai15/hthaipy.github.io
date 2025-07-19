@@ -32,51 +32,51 @@ st.subheader("📊 Exploratory Data Analysis")
 sales_by_week = df.groupby('week')['sales'].sum().reset_index()
 fig1, ax1 = plt.subplots(figsize=(10, 4))
 sns.lineplot(data=sales_by_week, x='week', y='sales', ax=ax1)
-ax1.set_title("1️⃣ Total Sales by Week")
+ax1.set_title("1️ Total Sales by Week")
 st.pyplot(fig1)
 
 # Chart 2: Sales by Category
 fig2, ax2 = plt.subplots()
 sns.barplot(data=df, x='category', y='sales', estimator=sum, ci=None, ax=ax2, palette='pastel')
-ax2.set_title("2️⃣ Total Sales by Product Category")
+ax2.set_title("2️ Total Sales by Product Category")
 ax2.tick_params(axis='x', rotation=45)
 st.pyplot(fig2)
 
 # Chart 3: Sales by Region
 fig3, ax3 = plt.subplots()
 sns.barplot(data=df, x='region', y='sales', estimator=sum, ci=None, ax=ax3, palette='muted')
-ax3.set_title("3️⃣ Total Sales by Region")
+ax3.set_title("3️ Total Sales by Region")
 st.pyplot(fig3)
 
 # Chart 4: Sales by Promotion
 fig4, ax4 = plt.subplots()
 sns.boxplot(data=df, x='promotion', y='sales', ax=ax4)
-ax4.set_title("4️⃣ Sales by Promotion (0 = No, 1 = Yes)")
+ax4.set_title("4️ Sales by Promotion (0 = No, 1 = Yes)")
 st.pyplot(fig4)
 
 # Chart 5: Sales by Holiday
 fig5, ax5 = plt.subplots()
 sns.boxplot(data=df, x='holiday', y='sales', ax=ax5)
-ax5.set_title("5️⃣ Sales on Holidays vs Normal Days")
+ax5.set_title("5️ Sales on Holidays vs Normal Days")
 st.pyplot(fig5)
 
 # Chart 6: Price vs Sales
 fig6, ax6 = plt.subplots()
 sns.scatterplot(data=df, x='price', y='sales', hue='promotion', alpha=0.6, ax=ax6)
-ax6.set_title("6️⃣ Price vs Sales (Colored by Promotion)")
+ax6.set_title("6️ Price vs Sales (Colored by Promotion)")
 st.pyplot(fig6)
 
 # Chart 7: Sales vs Revenue
 fig7, ax7 = plt.subplots()
 sns.scatterplot(data=df, x='sales', y='revenue', hue='category', alpha=0.7, ax=ax7)
-ax7.set_title("7️⃣ Sales vs Revenue (Colored by Category)")
+ax7.set_title("7️ Sales vs Revenue (Colored by Category)")
 st.pyplot(fig7)
 
 # Chart 8: Correlation Matrix
 fig8, ax8 = plt.subplots()
 corr = df[['sales', 'price', 'revenue', 'promotion', 'holiday']].corr()
 sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f', ax=ax8)
-ax8.set_title("8️⃣ Correlation Matrix")
+ax8.set_title("8️ Correlation Matrix")
 st.pyplot(fig8)
 
 # ========================
