@@ -108,34 +108,37 @@ st.pyplot(fig5)
 # ===========================
 st.header("📈 Dự báo doanh số")
 
-# Ép kiểu và loại bỏ NaN một lần nữa cho chắc chắn
+# Ép kiểu dữ liệu và loại bỏ NaN
 df = df.copy()
 df['week'] = pd.to_numeric(df['week'], errors='coerce')
 df = df.dropna(subset=['week', 'sales'])
 
-# Chuẩn bị dữ liệu
-X = df[['week']]
-y = df['sales']
+# Kiểm tra số lượng dữ liệu đủ để dự báo hay không
+if len(df) < 10:
+    st.warning("⚠️ Không đủ dữ liệu để dự báo doanh số. Vui lòng kiểm tra lại file dữ liệu.")
+else:
+    # Chuẩn bị dữ liệu
+    X = df[['week']]
+    y = df['sales']
 
-# Chia dữ liệu train/test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Chia dữ liệu train/test
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Huấn luyện mô hình
-model = LinearRegression()
-model.fit(X_train, y_train)
+    # Huấn luyện mô hình
+    model = LinearRegression()
+    model.fit(X_train, y_train)
 
-# Dự báo
-df_sorted = df.sort_values('week').copy()
-df_sorted['predicted_sales'] = model.predict(df_sorted[['week']])
+    # Dự báo
+    df_sorted = df.sort_values('week').copy()
+    df_sorted['predicted_sales'] = model.predict(df_sorted[['week']])
 
-# Vẽ biểu đồ dự báo
-fig6, ax6 = plt.subplots(figsize=(10, 5))
-sns.lineplot(x=df_sorted['week'], y=df_sorted['sales'], label='Thực tế', ax=ax6)
-sns.lineplot(x=df_sorted['week'], y=df_sorted['predicted_sales'], label='Dự báo', ax=ax6)
-ax6.set_title("Dự báo doanh số theo tuần")
-ax6.set_xlabel("Tuần")
-ax6.set_ylabel("Doanh số")
-ax6.legend()
-ax6.grid(True)
-st.pyplot(fig6)
-
+    # Vẽ biểu đồ dự báo
+    fig6, ax6 = plt.subplots(figsize=(10, 5))
+    sns.lineplot(x=df_sorted['week'], y=df_sorted['sales'], label='Thực tế', ax=ax6)
+    sns.lineplot(x=df_sorted['week'], y=df_sorted['predicted_sales'], label='Dự báo', ax=ax6)
+    ax6.set_title("Dự báo doanh số theo tuần")
+    ax6.set_xlabel("Tuần")
+    ax6.set_ylabel("Doanh số")
+    ax6.legend()
+    ax6.grid(True)
+    st.pyplot(fig6)
