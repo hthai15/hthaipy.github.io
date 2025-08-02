@@ -2,19 +2,18 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
-import numpy as np
+from sklearn.linear_model import LinearRegression
 
-# Cài đặt cấu hình
+# Cấu hình giao diện
 st.set_page_config(page_title="Supermarket Sales Forecast", layout="wide")
 
-# Tiêu đề
-st.title("🛒 Dự báo doanh số siêu thị & Trực quan hóa dữ liệu")
+# Tiêu đề chính
+st.title("🛒 Dự báo doanh số siêu thị & Phân tích dữ liệu")
 
 # Đọc dữ liệu
 @st.cache_data
+
 def load_data():
     df = pd.read_csv("supermarket_sales_forecast_sample.csv")
     return df
@@ -22,48 +21,42 @@ def load_data():
 df = load_data()
 
 # ===========================
-# 📌 Mô tả dữ liệu ban đầu
+# 🧹 Mô tả và tiền xử lý dữ liệu
 # ===========================
-st.header("📄 Mô tả dữ liệu")
-st.write("**Số dòng:**", df.shape[0])
-st.write("**Số cột:**", df.shape[1])
-st.write("**Các cột trong dữ liệu:**", list(df.columns))
-st.dataframe(df.head())
+st.header("🧹 Mô tả & Tiền xử lý dữ liệu")
 
-# ===========================
-# 🔧 Tiền xử lý dữ liệu
-# ===========================
-st.header("🔧 Tiền xử lý dữ liệu")
-st.write("**Kiểm tra giá trị null:**")
-st.dataframe(df.isnull().sum())
+st.subheader("1. Thông tin tổng quan")
+st.write(df.describe())
 
-st.write("**Thông tin tổng quan về dữ liệu:**")
-st.dataframe(df.describe())
+st.subheader("2. Kiểm tra dữ liệu thiếu")
+st.write(df.isnull().sum())
+
+# Chuyển đổi kiểu dữ liệu nếu cần
+if df['week'].dtype != 'int64' and df['week'].dtype != 'float64':
+    df['week'] = pd.to_numeric(df['week'], errors='coerce')
+df = df.dropna(subset=['week', 'sales'])
 
 # ===========================
-# 📊 Phân tích dữ liệu
+# 🔍 Phân tích dữ liệu
 # ===========================
-st.header("📊 Phân tích dữ liệu")
+st.header("🔍 Phân tích dữ liệu")
 
-# Tổng doanh số
-total_sales = df['sales'].sum()
-st.metric("Tổng doanh số", f"{total_sales:,.0f}")
+# Trung bình doanh số theo từng tuần
+weekly_avg = df.groupby('week')['sales'].mean().reset_index()
+st.write("### Trung bình doanh số theo tuần")
+st.dataframe(weekly_avg.head())
 
-# Doanh số trung bình theo tuần
-avg_weekly_sales = df.groupby('week')['sales'].sum().mean()
-st.metric("Doanh số trung bình theo tuần", f"{avg_weekly_sales:,.0f}")
-
-# Ảnh hưởng khuyến mãi
-promo_sales = df[df['promotion'] == 1]['sales'].mean()
-no_promo_sales = df[df['promotion'] == 0]['sales'].mean()
-st.write(f"✅ Doanh số trung bình có khuyến mãi: **{promo_sales:,.0f}**, không khuyến mãi: **{no_promo_sales:,.0f}**")
+# Tổng doanh số theo từng loại khuyến mãi
+promo_sum = df.groupby('promotion')['sales'].sum().reset_index()
+st.write("### Tổng doanh số theo khuyến mãi")
+st.dataframe(promo_sum)
 
 # ===========================
 # 📊 Trực quan hóa dữ liệu
 # ===========================
 st.header("📊 Trực quan hóa dữ liệu")
 
-# 1. Biểu đồ phân phối doanh số
+# 1. Phân phối doanh số
 st.subheader("1. Phân phối doanh số")
 fig1, ax1 = plt.subplots(figsize=(10, 5))
 sns.histplot(df['sales'], bins=30, kde=True, color='skyblue', ax=ax1)
@@ -72,7 +65,7 @@ ax1.set_xlabel('Doanh số')
 ax1.set_ylabel('Tần suất')
 st.pyplot(fig1)
 
-# 2. Top 10 sản phẩm bán chạy
+# 2. Top 10 sản phẩm bán chạy nhất
 st.subheader("2. Top 10 sản phẩm bán chạy nhất")
 top_products = df.groupby('product_id')['sales'].sum().sort_values(ascending=False).head(10)
 fig2, ax2 = plt.subplots(figsize=(10, 5))
@@ -82,8 +75,8 @@ ax2.set_xlabel('Tổng doanh số')
 ax2.set_ylabel('Mã sản phẩm')
 st.pyplot(fig2)
 
-# 3. Ảnh hưởng của Promotion đến Sales
-st.subheader("3. Doanh số theo chương trình khuyến mãi")
+# 3. Doanh số theo chương trình khuyến mãi
+st.subheader("3. Doanh số theo khuyến mãi")
 fig3, ax3 = plt.subplots(figsize=(10, 5))
 sns.boxplot(x='promotion', y='sales', data=df, palette='Set2', ax=ax3)
 ax3.set_title('Doanh số theo khuyến mãi')
@@ -91,7 +84,7 @@ ax3.set_xlabel('Khuyến mãi')
 ax3.set_ylabel('Doanh số')
 st.pyplot(fig3)
 
-# 4. Ảnh hưởng của Holiday đến Sales
+# 4. Doanh số theo ngày lễ
 st.subheader("4. Doanh số theo ngày lễ")
 fig4, ax4 = plt.subplots(figsize=(10, 5))
 sns.boxplot(x='holiday', y='sales', data=df, palette='coolwarm', ax=ax4)
@@ -111,7 +104,7 @@ ax5.grid(True)
 st.pyplot(fig5)
 
 # ===========================
-# 📈 Dự báo doanh số
+# 📈 Dự báo doanh số bằng Linear Regression
 # ===========================
 st.header("📈 Dự báo doanh số")
 
@@ -119,25 +112,24 @@ st.header("📈 Dự báo doanh số")
 X = df[['week']]
 y = df['sales']
 
+# Chia dữ liệu train/test
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Huấn luyện mô hình
 model = LinearRegression()
 model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
 
-# Đánh giá mô hình
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+# Dự báo
+df_sorted = df.sort_values('week')
+df_sorted['predicted_sales'] = model.predict(df_sorted[['week']])
 
-st.write(f"**MSE:** {mse:,.2f}")
-st.write(f"**R2 Score:** {r2:.2f}")
-
-# Biểu đồ dự báo
-st.subheader("Biểu đồ dự báo doanh số")
+# Vẽ biểu đồ dự báo
 fig6, ax6 = plt.subplots(figsize=(10, 5))
-ax6.scatter(X_test, y_test, label='Thực tế', color='blue')
-ax6.plot(X_test, y_pred, label='Dự báo', color='red')
-ax6.set_title('Dự báo doanh số theo tuần')
-ax6.set_xlabel('Tuần')
-ax6.set_ylabel('Doanh số')
+sns.lineplot(x=df_sorted['week'], y=df_sorted['sales'], label='Thực tế', ax=ax6)
+sns.lineplot(x=df_sorted['week'], y=df_sorted['predicted_sales'], label='Dự báo', ax=ax6)
+ax6.set_title("Dự báo doanh số theo tuần")
+ax6.set_xlabel("Tuần")
+ax6.set_ylabel("Doanh số")
 ax6.legend()
+ax6.grid(True)
 st.pyplot(fig6)
