@@ -108,6 +108,11 @@ st.pyplot(fig5)
 # ===========================
 st.header("📈 Dự báo doanh số")
 
+# Ép kiểu và loại bỏ NaN một lần nữa cho chắc chắn
+df = df.copy()
+df['week'] = pd.to_numeric(df['week'], errors='coerce')
+df = df.dropna(subset=['week', 'sales'])
+
 # Chuẩn bị dữ liệu
 X = df[['week']]
 y = df['sales']
@@ -120,7 +125,7 @@ model = LinearRegression()
 model.fit(X_train, y_train)
 
 # Dự báo
-df_sorted = df.sort_values('week')
+df_sorted = df.sort_values('week').copy()
 df_sorted['predicted_sales'] = model.predict(df_sorted[['week']])
 
 # Vẽ biểu đồ dự báo
@@ -133,3 +138,4 @@ ax6.set_ylabel("Doanh số")
 ax6.legend()
 ax6.grid(True)
 st.pyplot(fig6)
+
