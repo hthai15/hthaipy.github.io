@@ -117,21 +117,26 @@ st.markdown(f"""
 - **📌 R² (Hệ số xác định):** `{r2:.2f}`
 """)
 
-# --- Biểu đồ kết quả dự đoán ---
+# --- Biểu đồ dự đoán: thực tế vs dự đoán ---
 st.subheader("📈 So sánh Doanh số Thực tế vs Dự đoán")
+num_samples = st.slider("🔢 Chọn số mẫu hiển thị", min_value=10, max_value=min(100, len(y_test)), value=30, step=5)
 
 fig5, ax5 = plt.subplots(figsize=(10, 4))
-ax5.plot(y_test.values[:30], label='Thực tế', marker='o')
-ax5.plot(y_pred[:30], label='Dự đoán', marker='x')
-ax5.set_title("Thực tế vs Dự đoán (30 mẫu đầu)")
+ax5.plot(range(num_samples), y_test.values[:num_samples], label='Thực tế', marker='o', linestyle='-', color='blue')
+ax5.plot(range(num_samples), y_pred[:num_samples], label='Dự đoán', marker='x', linestyle='--', color='orange')
+ax5.set_title(f"📉 Thực tế vs Dự đoán ({num_samples} mẫu đầu)")
+ax5.set_xlabel("Chỉ số mẫu")
+ax5.set_ylabel("Sales")
 ax5.legend()
 ax5.grid(True)
 st.pyplot(fig5)
 
-# --- Biểu đồ phân phối sai số ---
+# --- Biểu đồ sai số ---
 st.subheader("📉 Phân phối sai số dự đoán")
 errors = y_test - y_pred
 fig6, ax6 = plt.subplots(figsize=(10, 4))
-sns.histplot(errors, bins=30, kde=True, ax=ax6)
+sns.histplot(errors, bins=30, kde=True, ax=ax6, color='salmon')
 ax6.set_title("Phân phối sai số")
+ax6.set_xlabel("Sai số")
+ax6.set_ylabel("Tần suất")
 st.pyplot(fig6)
