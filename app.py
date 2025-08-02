@@ -1,109 +1,137 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
-import plotly.express as px
+import seaborn as sns
+
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-st.set_page_config(layout="wide")
-st.title("Dự đoán doanh số siêu thị bán lẻ")
+# Cấu hình hiển thị
+st.set_page_config(page_title="📊 Dự báo doanh số siêu thị", layout="wide")
+sns.set(style='whitegrid')
 
-# --- Load dữ liệu ---
+# --- Tải dữ liệu ---
 @st.cache_data
 def load_data():
-    df = pd.read_csv("supermarket_sales_forecast_sample.csv")
+    df = pd.read_csv('supermarket_sales_forecast_sample.csv')
+    df = df.drop_duplicates()
     return df
 
 df = load_data()
-st.subheader("📊 Dữ liệu gốc")
-st.dataframe(df.head(10), use_container_width=True)
 
-# --- Tiền xử lý ---
-st.subheader("🔧 Tiền xử lý dữ liệu")
-df.drop_duplicates(inplace=True)
-df.dropna(inplace=True)
+st.title("📈 Ứng dụng Dự báo Doanh số Bán hàng Siêu thị")
+st.markdown("## 1. 🧾 Tổng quan dữ liệu")
 
-if "date" in df.columns:
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-    df["day"] = df["date"].dt.day
-
-# Hiển thị mô tả dữ liệu
-st.write("Mô tả dữ liệu:")
-st.dataframe(df.describe())
-
-# --- Trực quan hóa dữ liệu ---
-st.subheader("📈 Trực quan hóa dữ liệu")
+# --- Tổng quan ---
+st.write("### 🗂️ Dữ liệu mẫu")
+st.dataframe(df.head())
 
 col1, col2 = st.columns(2)
 with col1:
-    fig1 = px.histogram(df, x="sales", nbins=30, title="Phân phối doanh số")
-    st.plotly_chart(fig1, use_container_width=True)
+    st.write("**Thông tin dữ liệu**")
+    buffer = df.info(buf=None)
+    st.text(str(buffer))
 
 with col2:
-    if "promotion" in df.columns:
-        fig2 = px.box(df, x="promotion", y="sales", title="Doanh số theo khuyến mãi")
-        st.plotly_chart(fig2, use_container_width=True)
+    st.write("**Thống kê mô tả**")
+    st.dataframe(df.describe())
 
+# --- Phân tích Missing và Duplicate ---
+st.write("### 📌 Kiểm tra dữ liệu thiếu & trùng")
+st.write("**Dữ liệu thiếu:**")
+st.write(df.isnull().sum())
+st.write(f"**Số dòng trùng lặp:** {df.duplicated().sum()}")
+
+# --- Chuẩn hoá cột Sales ---
+scaler = StandardScaler()
+df['sales_scaled'] = scaler.fit_transform(df[['sales']])
+
+# --- Biểu đồ phân phối sales ---
+st.markdown("## 2. 📊 Trực quan dữ liệu")
+
+st.subheader("🔹 Phân phối doanh số")
+fig1, ax1 = plt.subplots(figsize=(8, 4))
+sns.histplot(df['sales'], kde=True, bins=30, color='skyblue', ax=ax1)
+ax1.set_title('Phân phối Doanh số (Sales)')
+st.pyplot(fig1)
+
+# --- Top 10 sản phẩm ---
+st.subheader("🔹 Top 10 sản phẩm bán chạy nhất")
+top_products = df.groupby('product_id')['sales'].sum().sort_values(ascending=False).head(10)
+fig2, ax2 = plt.subplots(figsize=(10, 4))
+sns.barplot(x=top_products.index.astype(str), y=top_products.values, palette='viridis', ax=ax2)
+ax2.set_title('Top 10 sản phẩm bán chạy nhất')
+ax2.set_xlabel('Product ID')
+ax2.set_ylabel('Tổng Sales')
+st.pyplot(fig2)
+
+# --- Boxplot ảnh hưởng promotion & holiday ---
 col3, col4 = st.columns(2)
+
 with col3:
-    if "holiday" in df.columns:
-        fig3 = px.box(df, x="holiday", y="sales", title="Doanh số theo ngày lễ")
-        st.plotly_chart(fig3, use_container_width=True)
+    st.subheader("🔹 Ảnh hưởng của Promotion")
+    fig3, ax3 = plt.subplots(figsize=(6, 4))
+    sns.boxplot(x='promotion', y='sales', data=df, ax=ax3)
+    ax3.set_title('Promotion vs Sales')
+    st.pyplot(fig3)
 
 with col4:
-    if "week" in df.columns:
-        fig4 = px.line(df.groupby("week")["sales"].mean().reset_index(), x="week", y="sales", title="Doanh số trung bình theo tuần")
-        st.plotly_chart(fig4, use_container_width=True)
+    st.subheader("🔹 Ảnh hưởng của Holiday")
+    fig4, ax4 = plt.subplots(figsize=(6, 4))
+    sns.boxplot(x='holiday', y='sales', data=df, ax=ax4)
+    ax4.set_title('Holiday vs Sales')
+    st.pyplot(fig4)
 
-# --- Chuẩn bị dữ liệu mô hình ---
-st.subheader("🤖 Huấn luyện mô hình dự báo")
+# --- Xây dựng mô hình ---
+st.markdown("## 3. 🤖 Dự báo Doanh số với Linear Regression")
 
-# Chọn các đặc trưng liên quan
-features = ["week", "promotion", "holiday"]
-target = "sales"
+# One-hot encode
+df_encoded = pd.get_dummies(df, columns=['region', 'category', 'product_id'], drop_first=True)
 
-# Kiểm tra cột có tồn tại
-if all(col in df.columns for col in features + [target]):
-    X = df[features]
-    y = df[target]
+# Feature & Label
+X = df_encoded.drop(['sales', 'week'], axis=1)
+y = df_encoded['sales']
 
-    # Chia dữ liệu
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Huấn luyện mô hình Linear Regression
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+# Huấn luyện mô hình
+model = LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
 
-    # Dự đoán
-    y_pred = model.predict(X_test)
+# Đánh giá
+mae = mean_absolute_error(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+rmse = mse ** 0.5
+r2 = r2_score(y_test, y_pred)
 
-    # Đánh giá mô hình
-    mae = mean_absolute_error(y_test, y_pred)
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(y_test, y_pred)
+st.write("### 📋 Đánh giá mô hình Linear Regression:")
+st.markdown(f"""
+- **📌 MAE (Sai số trung bình tuyệt đối):** `{mae:.2f}`  
+- **📌 MSE (Sai số bình phương trung bình):** `{mse:.2f}`  
+- **📌 RMSE (Căn bậc hai của MSE):** `{rmse:.2f}`  
+- **📌 R² (Hệ số xác định):** `{r2:.2f}`
+""")
 
-    st.markdown("**🎯 Kết quả đánh giá mô hình:**")
-    st.write(f"- MAE: {mae:.2f}")
-    st.write(f"- MSE: {mse:.2f}")
-    st.write(f"- RMSE: {rmse:.2f}")
-    st.write(f"- R² Score: {r2:.2f}")
+# --- Biểu đồ kết quả dự đoán ---
+st.subheader("📈 So sánh Doanh số Thực tế vs Dự đoán")
 
-    # --- Vẽ biểu đồ sai số ---
-    st.subheader("📉 Phân phối sai số dự đoán")
-    errors = y_test - y_pred
-    fig, ax = plt.subplots(figsize=(10, 4))
-    sns.histplot(errors, bins=30, kde=True, ax=ax)
-    ax.set_title("Phân phối sai số dự đoán")
-    ax.set_xlabel("Sai số")
-    ax.set_ylabel("Tần suất")
-    st.pyplot(fig)
+fig5, ax5 = plt.subplots(figsize=(10, 4))
+ax5.plot(y_test.values[:30], label='Thực tế', marker='o')
+ax5.plot(y_pred[:30], label='Dự đoán', marker='x')
+ax5.set_title("Thực tế vs Dự đoán (30 mẫu đầu)")
+ax5.legend()
+ax5.grid(True)
+st.pyplot(fig5)
 
-else:
-    st.warning("❌ Một số cột cần thiết không có trong file CSV. Vui lòng kiểm tra lại.")
-
+# --- Biểu đồ phân phối sai số ---
+st.subheader("📉 Phân phối sai số dự đoán")
+errors = y_test - y_pred
+fig6, ax6 = plt.subplots(figsize=(10, 4))
+sns.histplot(errors, bins=30, kde=True, ax=ax6)
+ax6.set_title("Phân phối sai số")
+st.pyplot(fig6)
