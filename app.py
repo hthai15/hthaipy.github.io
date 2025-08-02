@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
 
-# Cấu hình trang
+# Cài đặt cấu hình
 st.set_page_config(page_title="Supermarket Sales Forecast", layout="wide")
 
 # Tiêu đề
@@ -21,11 +22,48 @@ def load_data():
 df = load_data()
 
 # ===========================
+# 📌 Mô tả dữ liệu ban đầu
+# ===========================
+st.header("📄 Mô tả dữ liệu")
+st.write("**Số dòng:**", df.shape[0])
+st.write("**Số cột:**", df.shape[1])
+st.write("**Các cột trong dữ liệu:**", list(df.columns))
+st.dataframe(df.head())
+
+# ===========================
+# 🔧 Tiền xử lý dữ liệu
+# ===========================
+st.header("🔧 Tiền xử lý dữ liệu")
+st.write("**Kiểm tra giá trị null:**")
+st.dataframe(df.isnull().sum())
+
+st.write("**Thông tin tổng quan về dữ liệu:**")
+st.dataframe(df.describe())
+
+# ===========================
+# 📊 Phân tích dữ liệu
+# ===========================
+st.header("📊 Phân tích dữ liệu")
+
+# Tổng doanh số
+total_sales = df['sales'].sum()
+st.metric("Tổng doanh số", f"{total_sales:,.0f}")
+
+# Doanh số trung bình theo tuần
+avg_weekly_sales = df.groupby('week')['sales'].sum().mean()
+st.metric("Doanh số trung bình theo tuần", f"{avg_weekly_sales:,.0f}")
+
+# Ảnh hưởng khuyến mãi
+promo_sales = df[df['promotion'] == 1]['sales'].mean()
+no_promo_sales = df[df['promotion'] == 0]['sales'].mean()
+st.write(f"✅ Doanh số trung bình có khuyến mãi: **{promo_sales:,.0f}**, không khuyến mãi: **{no_promo_sales:,.0f}**")
+
+# ===========================
 # 📊 Trực quan hóa dữ liệu
 # ===========================
 st.header("📊 Trực quan hóa dữ liệu")
 
-# 1. Phân phối doanh số
+# 1. Biểu đồ phân phối doanh số
 st.subheader("1. Phân phối doanh số")
 fig1, ax1 = plt.subplots(figsize=(10, 5))
 sns.histplot(df['sales'], bins=30, kde=True, color='skyblue', ax=ax1)
@@ -33,9 +71,6 @@ ax1.set_title('Phân phối doanh số')
 ax1.set_xlabel('Doanh số')
 ax1.set_ylabel('Tần suất')
 st.pyplot(fig1)
-
-with st.expander("📊 Phân tích"):
-    st.markdown("- Doanh số phân bố lệch phải, cho thấy phần lớn các giao dịch có giá trị doanh số thấp.")
 
 # 2. Top 10 sản phẩm bán chạy
 st.subheader("2. Top 10 sản phẩm bán chạy nhất")
@@ -47,9 +82,6 @@ ax2.set_xlabel('Tổng doanh số')
 ax2.set_ylabel('Mã sản phẩm')
 st.pyplot(fig2)
 
-with st.expander("📊 Phân tích"):
-    st.markdown("- Một số sản phẩm có doanh số vượt trội rõ rệt, phản ánh độ phổ biến hoặc hiệu quả marketing.")
-
 # 3. Ảnh hưởng của Promotion đến Sales
 st.subheader("3. Doanh số theo chương trình khuyến mãi")
 fig3, ax3 = plt.subplots(figsize=(10, 5))
@@ -59,9 +91,6 @@ ax3.set_xlabel('Khuyến mãi')
 ax3.set_ylabel('Doanh số')
 st.pyplot(fig3)
 
-with st.expander("📊 Phân tích"):
-    st.markdown("- Nhìn chung, các đơn hàng có khuyến mãi có xu hướng đạt doanh số cao hơn.")
-
 # 4. Ảnh hưởng của Holiday đến Sales
 st.subheader("4. Doanh số theo ngày lễ")
 fig4, ax4 = plt.subplots(figsize=(10, 5))
@@ -70,9 +99,6 @@ ax4.set_title('Doanh số theo ngày lễ')
 ax4.set_xlabel('Ngày lễ')
 ax4.set_ylabel('Doanh số')
 st.pyplot(fig4)
-
-with st.expander("📊 Phân tích"):
-    st.markdown("- Có sự khác biệt nhẹ về doanh số giữa ngày lễ và ngày thường, tùy thuộc vào hành vi tiêu dùng.")
 
 # 5. Xu hướng doanh số theo tuần
 st.subheader("5. Xu hướng doanh số theo tuần")
@@ -84,43 +110,34 @@ ax5.set_ylabel('Doanh số')
 ax5.grid(True)
 st.pyplot(fig5)
 
-with st.expander("📊 Phân tích"):
-    st.markdown(
-        "- Biểu đồ đường cho thấy xu hướng doanh số theo thời gian (tuần).\n"
-        "- Có thể thấy các tuần có mức tăng giảm khác nhau, phản ánh ảnh hưởng của các chiến dịch marketing, ngày lễ hoặc sự biến động nhu cầu."
-    )
-
 # ===========================
-# 🤖 Dự báo doanh số đơn giản
+# 📈 Dự báo doanh số
 # ===========================
-st.header("🤖 Dự báo doanh số với Linear Regression")
+st.header("📈 Dự báo doanh số")
 
 # Chuẩn bị dữ liệu
-features = ['week', 'promotion', 'holiday']
-X = df[features]
+X = df[['week']]
 y = df['sales']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
 model = LinearRegression()
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
-# Hiển thị kết quả
-st.subheader("Hiệu suất mô hình")
-st.write(f"R² Score: {r2_score(y_test, y_pred):.2f}")
-st.write(f"RMSE: {mean_squared_error(y_test, y_pred, squared=False):.2f}")
+# Đánh giá mô hình
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
 
-# Biểu đồ so sánh dự báo
-st.subheader("So sánh giá trị thực tế và dự báo")
+st.write(f"**MSE:** {mse:,.2f}")
+st.write(f"**R2 Score:** {r2:.2f}")
+
+# Biểu đồ dự báo
+st.subheader("Biểu đồ dự báo doanh số")
 fig6, ax6 = plt.subplots(figsize=(10, 5))
-ax6.plot(y_test.values[:50], label='Thực tế')
-ax6.plot(y_pred[:50], label='Dự báo')
-ax6.set_title('So sánh doanh số thực tế và dự báo')
-ax6.set_xlabel('Đơn hàng')
+ax6.scatter(X_test, y_test, label='Thực tế', color='blue')
+ax6.plot(X_test, y_pred, label='Dự báo', color='red')
+ax6.set_title('Dự báo doanh số theo tuần')
+ax6.set_xlabel('Tuần')
 ax6.set_ylabel('Doanh số')
 ax6.legend()
 st.pyplot(fig6)
-
-with st.expander("📊 Nhận xét"):
-    st.markdown("- Mô hình hồi quy tuyến tính có thể mô phỏng xu hướng nhưng chưa hoàn toàn chính xác với dữ liệu hiện tại.")
