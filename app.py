@@ -108,13 +108,7 @@ st.pyplot(fig5)
 # ===========================
 st.header("📈 Dự báo doanh số")
 
-# Ép kiểu dữ liệu và loại bỏ NaN
-df = df.copy()
-df['week'] = pd.to_numeric(df['week'], errors='coerce')
-df = df.dropna(subset=['week', 'sales'])
-
-# Kiểm tra số lượng dữ liệu đủ để dự báo hay không
-if len(df) < 10:
+if len(df) < 2:
     st.warning("⚠️ Không đủ dữ liệu để dự báo doanh số. Vui lòng kiểm tra lại file dữ liệu.")
 else:
     # Chuẩn bị dữ liệu
@@ -129,7 +123,7 @@ else:
     model.fit(X_train, y_train)
 
     # Dự báo
-    df_sorted = df.sort_values('week').copy()
+    df_sorted = df.sort_values('week')
     df_sorted['predicted_sales'] = model.predict(df_sorted[['week']])
 
     # Vẽ biểu đồ dự báo
