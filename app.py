@@ -14,7 +14,7 @@ st.title("📊 Dự đoán Doanh số Bán hàng với Linear Regression")
 
 # Đọc dữ liệu
 st.subheader("1️⃣ Tổng quan dữ liệu")
-df = pd.read_csv("data/sales_data.csv")
+df = pd.read_csv("supermarket_sales_forecast_sample.csv")
 
 st.markdown(f"**Shape:** {df.shape}")
 st.dataframe(df.head())
