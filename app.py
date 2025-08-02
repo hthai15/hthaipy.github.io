@@ -1,117 +1,78 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor
+import seaborn as sns
+
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-import numpy as np
 
-st.set_page_config(page_title="🛒 Sales Forecast", layout="wide")
+# --- Cài đặt giao diện ---
+st.set_page_config(page_title="Dự đoán Doanh số Siêu thị", layout="wide")
+st.title("📊 Ứng dụng Dự đoán Doanh số Siêu thị bằng Linear Regression")
 
-@st.cache_data
-def load_data():
-    df = pd.read_csv("supermarket_sales_forecast_sample.csv")
-    df['week'] = pd.to_datetime(df['week'])
-    return df
+# --- Tải dữ liệu ---
+st.sidebar.header("📁 Upload dữ liệu CSV")
+uploaded_file = st.sidebar.file_uploader("Chọn file CSV", type=["csv"])
 
-df = load_data()
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.subheader("🔍 Xem trước dữ liệu")
+    st.write(df.head())
 
-st.title("🛒 Supermarket Sales Forecast")
-st.write("Analyze sales data and forecast future sales with Random Forest.")
+    # --- Tiền xử lý ---
+    st.subheader("🔧 Tiền xử lý dữ liệu")
+    df = df.dropna()
+    df = df.drop_duplicates()
+    df_encoded = pd.get_dummies(df, columns=['region', 'category', 'product_id'], drop_first=True)
+    st.write("✅ Đã mã hóa One-Hot Encoding")
 
-# ======= Visualization =======
-st.subheader("📊 Exploratory Data Analysis")
+    # --- Tách dữ liệu ---
+    X = df_encoded.drop(['sales', 'week'], axis=1)
+    y = df_encoded['sales']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-fig1 = plt.figure(figsize=(10, 4))
-sns.lineplot(data=df.groupby("week")["sales"].sum().reset_index(), x="week", y="sales")
-plt.title("Total Sales by Week")
-st.pyplot(fig1)
+    # --- Huấn luyện mô hình ---
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
 
-fig2 = plt.figure()
-sns.barplot(data=df, x="category", y="sales", estimator=sum, ci=None)
-plt.title("Sales by Category")
-plt.xticks(rotation=45)
-st.pyplot(fig2)
+    # --- Đánh giá ---
+    mae = mean_absolute_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    rmse = mse ** 0.5
+    r2 = r2_score(y_test, y_pred)
 
-fig3 = plt.figure()
-sns.barplot(data=df, x="region", y="sales", estimator=sum, ci=None)
-plt.title("Sales by Region")
-st.pyplot(fig3)
+    st.subheader("📈 Kết quả đánh giá mô hình")
+    st.markdown(f"""
+    - **MAE**: {mae:.2f}  
+    - **MSE**: {mse:.2f}  
+    - **RMSE**: {rmse:.2f}  
+    - **R² (R-squared)**: {r2:.2f}
+    """)
 
-fig4 = plt.figure()
-sns.boxplot(data=df, x="promotion", y="sales")
-plt.title("Promotion vs Sales")
-st.pyplot(fig4)
+    # --- Biểu đồ dự đoán vs thực tế ---
+    st.subheader("📊 So sánh Doanh số Thực tế vs Dự đoán")
+    fig1, ax1 = plt.subplots(figsize=(10, 5))
+    ax1.plot(y_test.values[:30], label='Thực tế', marker='o')
+    ax1.plot(y_pred[:30], label='Dự đoán', marker='x')
+    ax1.set_title("Doanh số Thực tế vs Dự đoán (30 mẫu đầu)")
+    ax1.set_xlabel("Chỉ số mẫu")
+    ax1.set_ylabel("Sales")
+    ax1.legend()
+    ax1.grid(True)
+    st.pyplot(fig1)
 
-fig5 = plt.figure()
-sns.boxplot(data=df, x="holiday", y="sales")
-plt.title("Holiday vs Sales")
-st.pyplot(fig5)
+    # --- Biểu đồ sai số ---
+    st.subheader("📉 Phân phối Sai số Dự đoán")
+    errors = y_test - y_pred
+    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    sns.histplot(errors, bins=30, kde=True, ax=ax2)
+    ax2.set_title("Phân phối sai số dự đoán")
+    ax2.set_xlabel("Sai số")
+    ax2.set_ylabel("Tần suất")
+    ax2.grid(True)
+    st.pyplot(fig2)
 
-fig6 = plt.figure()
-sns.scatterplot(data=df, x="price", y="sales", hue="promotion")
-plt.title("Price vs Sales (Promotion)")
-st.pyplot(fig6)
-
-fig7 = plt.figure()
-sns.scatterplot(data=df, x="sales", y="revenue", hue="category")
-plt.title("Sales vs Revenue by Category")
-st.pyplot(fig7)
-
-fig8 = plt.figure()
-sns.heatmap(df[["sales", "price", "revenue", "promotion", "holiday"]].corr(), annot=True, cmap="coolwarm")
-plt.title("Correlation Matrix")
-st.pyplot(fig8)
-
-# ======= Preprocess =======
-le_region = LabelEncoder()
-le_category = LabelEncoder()
-
-df['region_encoded'] = le_region.fit_transform(df['region'])
-df['category_encoded'] = le_category.fit_transform(df['category'])
-
-features = ['price', 'revenue', 'promotion', 'holiday', 'region_encoded', 'category_encoded']
-X = df[features]
-y = df['sales']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-model = RandomForestRegressor(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-st.subheader("📈 Model Evaluation")
-st.write(f"**MAE:** {mean_absolute_error(y_test, y_pred):.2f}")
-st.write(f"**RMSE:** {np.sqrt(mean_squared_error(y_test, y_pred)):.2f}")
-st.write(f"**R² Score:** {r2_score(y_test, y_pred):.2f}")
-
-fig9 = plt.figure()
-sns.scatterplot(x=y_test, y=y_pred, alpha=0.6)
-plt.plot([y.min(), y.max()], [y.min(), y.max()], '--r')
-plt.xlabel("Actual Sales")
-plt.ylabel("Predicted Sales")
-plt.title("Actual vs Predicted Sales")
-st.pyplot(fig9)
-
-# ======= Predict from user input =======
-st.subheader("🔮 Predict Sales with Your Input")
-
-col1, col2 = st.columns(2)
-with col1:
-    price = st.number_input("Product Price", value=20.0)
-    promotion = st.selectbox("Promotion", [0, 1])
-    holiday = st.selectbox("Holiday", [0, 1])
-with col2:
-    region = st.selectbox("Region", df['region'].unique())
-    category = st.selectbox("Category", df['category'].unique())
-    revenue = st.number_input("Expected Revenue", value=5000.0)
-
-region_code = le_region.transform([region])[0]
-category_code = le_category.transform([category])[0]
-
-new_data = pd.DataFrame([[price, revenue, promotion, holiday, region_code, category_code]], columns=features)
-predicted_sales = model.predict(new_data)[0]
-
-st.success(f"📊 Predicted Sales: **{predicted_sales:.2f} units**")
+else:
+    st.warning("📌 Vui lòng upload file CSV để bắt đầu.")
