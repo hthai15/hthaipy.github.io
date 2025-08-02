@@ -14,7 +14,7 @@ st.title("📊 Dự đoán Doanh số Bán hàng với Linear Regression")
 # Load data
 @st.cache_data
 def load_data():
-    return pd.read_csv('data/sales_data.csv')
+    return pd.read_csv('sales_data.csv')
 
 df = load_data()
 st.subheader("1️⃣ Tổng quan dữ liệu")
