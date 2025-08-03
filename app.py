@@ -4,137 +4,135 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-st.set_page_config(page_title="Sales Analysis Dashboard", layout="wide")
-sns.set(style='whitegrid')
+st.set_page_config(layout="wide")
+st.title("📊 Dự Báo Doanh Số Siêu Thị")
 
-st.title("📊 Sales Analysis and Prediction Dashboard")
+# --- Đọc dữ liệu ---
+df = pd.read_csv("supermarket_sales_forecast_sample.csv")
 
-# Load dataset
-def load_data():
-    return pd.read_csv("supermarket_sales_forecast_sample.csv")
+# --- Sidebar lọc dữ liệu ---
+st.sidebar.header("🔎 Bộ lọc dữ liệu")
 
-df = load_data()
+week_range = st.sidebar.slider("Chọn tuần", int(df['week'].min()), int(df['week'].max()), (int(df['week'].min()), int(df['week'].max())))
+regions = st.sidebar.multiselect("Chọn khu vực", options=df['region'].unique(), default=df['region'].unique())
+promo_filter = st.sidebar.selectbox("Khuyến mãi", ["Tất cả", "Có khuyến mãi", "Không khuyến mãi"])
 
-# Sidebar filters
-st.sidebar.header("🔍 Bộ lọc dữ liệu")
-selected_week = st.sidebar.multiselect("Chọn tuần:", sorted(df['week'].unique()), default=sorted(df['week'].unique()))
-selected_region = st.sidebar.multiselect("Chọn khu vực:", df['region'].unique(), default=df['region'].unique())
-selected_promotion = st.sidebar.multiselect("Khuyến mãi:", df['promotion'].unique(), default=df['promotion'].unique())
+df_filtered = df[
+    (df['week'] >= week_range[0]) & 
+    (df['week'] <= week_range[1]) & 
+    (df['region'].isin(regions))
+]
 
-filtered_df = df[(df['week'].isin(selected_week)) &
-                 (df['region'].isin(selected_region)) &
-                 (df['promotion'].isin(selected_promotion))]
+if promo_filter == "Có khuyến mãi":
+    df_filtered = df_filtered[df_filtered['promotion'] == 1]
+elif promo_filter == "Không khuyến mãi":
+    df_filtered = df_filtered[df_filtered['promotion'] == 0]
 
-# Preprocess
-filtered_df = filtered_df.drop_duplicates()
-scaler = StandardScaler()
-filtered_df['sales_scaled'] = scaler.fit_transform(filtered_df[['sales']])
+# --- Giới thiệu & mô tả dữ liệu ---
+st.subheader("📄 Giới thiệu Dữ liệu")
+st.markdown("""
+**Nguồn dữ liệu:** `supermarket_sales_forecast_sample.csv`
 
-# Tabs
-overview, visual, model, interpret = st.tabs(["📄 Tổng quan", "📊 Biểu đồ", "🤖 Mô hình dự báo", "🧠 Diễn giải mô hình"])
+**Ý nghĩa các cột:**
+- `week`: Tuần trong năm
+- `region`: Khu vực bán hàng
+- `product_id`: Mã sản phẩm
+- `category`: Danh mục sản phẩm
+- `promotion`: Có khuyến mãi (1) hoặc không (0)
+- `holiday`: Tuần có ngày lễ (1) hoặc không (0)
+- `sales`: Doanh số bán hàng
 
-with overview:
-    st.subheader("🔍 Tổng quan dữ liệu")
-    st.dataframe(filtered_df.head())
-    st.write("**Thông tin cột:**")
-    st.markdown("""
-    - `week`: Số thứ tự tuần trong năm
-    - `region`: Khu vực phân phối
-    - `category`: Loại sản phẩm
-    - `product_id`: Mã sản phẩm
-    - `sales`: Doanh số bán ra (số lượng đơn vị hoặc tiền tệ)
-    - `promotion`: 1 nếu có khuyến mãi, 0 nếu không
-    - `holiday`: 1 nếu là tuần có ngày lễ, 0 nếu không
-    """)
-    st.write("**Thông tin tổng quát:**")
-    st.write("Null values:", filtered_df.isnull().sum())
-    st.write("Duplicate rows:", filtered_df.duplicated().sum())
-    st.write("Data types:")
-    st.write(filtered_df.dtypes)
-    st.write("Thống kê mô tả:")
-    st.write(filtered_df.describe())
+**Mục tiêu:** Phân tích doanh số, tìm hiểu yếu tố ảnh hưởng & xây dựng mô hình dự đoán doanh số.
+""")
 
-with visual:
-    st.subheader("📊 Phân tích trực quan")
-    fig1, ax1 = plt.subplots(figsize=(8, 5))
-    sns.histplot(filtered_df['sales'], kde=True, color='skyblue', bins=30, ax=ax1)
-    ax1.set_title('Phân phối doanh số bán hàng')
-    st.pyplot(fig1)
+# --- Tổng quan dữ liệu ---
+st.subheader("📊 Tổng quan dữ liệu đã lọc")
+st.dataframe(df_filtered.head())
 
-    top10 = filtered_df.groupby('product_id')['sales'].sum().sort_values(ascending=False).head(10)
-    fig2, ax2 = plt.subplots(figsize=(10, 5))
-    sns.barplot(x=top10.index.astype(str), y=top10.values, palette='viridis', ax=ax2)
-    ax2.set_title('Top 10 sản phẩm bán chạy')
-    st.pyplot(fig2)
+col1, col2, col3 = st.columns(3)
+col1.metric("📦 Số sản phẩm", df_filtered['product_id'].nunique())
+col2.metric("💰 Tổng doanh số", f"{df_filtered['sales'].sum():,.0f}")
+col3.metric("📆 Số tuần", df_filtered['week'].nunique())
 
-    fig3, ax3 = plt.subplots(figsize=(7,5))
-    sns.boxplot(x='promotion', y='sales', data=filtered_df, ax=ax3)
-    ax3.set_title('Ảnh hưởng của Promotion đến Sales')
-    st.pyplot(fig3)
+# --- Biểu đồ phân tích ---
+st.subheader("📈 Phân tích doanh số")
 
-    fig4, ax4 = plt.subplots(figsize=(7,5))
-    sns.boxplot(x='holiday', y='sales', data=filtered_df, ax=ax4)
-    ax4.set_title('Ảnh hưởng của Holiday đến Sales')
-    st.pyplot(fig4)
+fig1, ax1 = plt.subplots(figsize=(8, 4))
+sns.histplot(df_filtered['sales'], kde=True, bins=30, color='skyblue', ax=ax1)
+ax1.set_title("Phân phối Doanh số")
+st.pyplot(fig1)
 
-    fig5, ax5 = plt.subplots(figsize=(10, 5))
-    sns.lineplot(data=filtered_df, x='week', y='sales', color='green', ax=ax5)
-    ax5.set_title('Xu hướng doanh số theo tuần')
-    st.pyplot(fig5)
+top_products = df_filtered.groupby('product_id')['sales'].sum().sort_values(ascending=False).head(10)
+fig2, ax2 = plt.subplots(figsize=(10, 4))
+sns.barplot(x=top_products.index.astype(str), y=top_products.values, palette='viridis', ax=ax2)
+ax2.set_title("Top 10 sản phẩm bán chạy nhất")
+st.pyplot(fig2)
 
-with model:
-    st.subheader("🤖 Mô hình dự báo doanh số")
-    df_encoded = pd.get_dummies(filtered_df, columns=['region', 'category', 'product_id'], drop_first=True)
-    X = df_encoded.drop(['sales', 'week'], axis=1)
-    y = df_encoded['sales']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+fig3, ax3 = plt.subplots(figsize=(8, 4))
+sns.boxplot(x='promotion', y='sales', data=df_filtered, ax=ax3)
+ax3.set_title("Ảnh hưởng của Khuyến mãi đến Doanh số")
+st.pyplot(fig3)
 
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+fig4, ax4 = plt.subplots(figsize=(8, 4))
+sns.boxplot(x='holiday', y='sales', data=df_filtered, ax=ax4)
+ax4.set_title("Ảnh hưởng của Ngày lễ đến Doanh số")
+st.pyplot(fig4)
 
-    mae = mean_absolute_error(y_test, y_pred)
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = mse ** 0.5
-    r2 = r2_score(y_test, y_pred)
+fig5, ax5 = plt.subplots(figsize=(10, 4))
+weekly_sales = df_filtered.groupby('week')['sales'].sum()
+sns.lineplot(x=weekly_sales.index, y=weekly_sales.values, color='green', ax=ax5)
+ax5.set_title("Xu hướng Doanh số theo Tuần")
+st.pyplot(fig5)
 
-    st.metric("📌 MAE", f"{mae:.2f}")
-    st.metric("📌 MSE", f"{mse:.2f}")
-    st.metric("📌 RMSE", f"{rmse:.2f}")
-    st.metric("📌 R-squared", f"{r2:.2f}")
+# --- Mô hình dự báo ---
+st.subheader("🤖 Mô hình dự báo doanh số")
 
-    fig6, ax6 = plt.subplots(figsize=(10, 5))
-    ax6.plot(y_test.values[:30], label='Thực tế', marker='o')
-    ax6.plot(y_pred[:30], label='Dự đoán', marker='x')
-    ax6.set_title("So sánh Doanh số Thực tế vs Dự đoán (30 mẫu đầu)")
-    ax6.legend()
-    st.pyplot(fig6)
+df_model = df_filtered.copy()
+df_model = pd.get_dummies(df_model, columns=['region', 'category', 'product_id'], drop_first=True)
+X = df_model.drop(['sales', 'week'], axis=1)
+y = df_model['sales']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    fig7, ax7 = plt.subplots(figsize=(10, 4))
-    errors = y_test - y_pred
-    sns.histplot(errors, bins=30, kde=True, ax=ax7)
-    ax7.set_title("Phân phối sai số dự đoán")
-    st.pyplot(fig7)
+model = LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
 
-with interpret:
-    st.subheader("🧠 Diễn giải mô hình")
-    coef_df = pd.DataFrame({
-        'Feature': X.columns,
-        'Coefficient': model.coef_
-    }).sort_values(by='Coefficient', key=abs, ascending=False)
+mae = mean_absolute_error(y_test, y_pred)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+r2 = r2_score(y_test, y_pred)
 
-    st.write("📌 **Hệ số ảnh hưởng của từng biến đầu vào**")
-    st.dataframe(coef_df)
+col1, col2, col3 = st.columns(3)
+col1.metric("📌 MAE", f"{mae:.2f}")
+col2.metric("📌 RMSE", f"{rmse:.2f}")
+col3.metric("📌 R²", f"{r2:.2f}")
 
-    st.markdown("""
-    ### 📚 Kết luận:
-    - Mô hình Linear Regression giúp xác định mối liên hệ giữa các yếu tố như khuyến mãi, ngày lễ, loại sản phẩm và doanh số.
-    - Chỉ số R² cho biết mô hình giải thích được khoảng **{:.2%}** phương sai trong dữ liệu.
-    - Các yếu tố ảnh hưởng lớn nhất gồm: `{}`
-    - Mô hình phù hợp cho việc **dự báo sơ bộ** và **hiểu nguyên nhân chính ảnh hưởng doanh số**.
-    """.format(r2, ', '.join(coef_df['Feature'].head(3)))
-    )
+# --- So sánh thực tế vs dự đoán ---
+st.subheader("📊 So sánh Thực tế vs Dự đoán")
+
+fig6, ax6 = plt.subplots(figsize=(10, 4))
+ax6.plot(y_test.values[:30], label='Thực tế', marker='o')
+ax6.plot(y_pred[:30], label='Dự đoán', marker='x')
+ax6.legend()
+ax6.set_title("So sánh 30 mẫu đầu")
+st.pyplot(fig6)
+
+# --- Hệ số hồi quy ---
+st.subheader("🧠 Hệ số ảnh hưởng từ mô hình")
+
+coefs = pd.Series(model.coef_, index=X.columns).sort_values(key=abs, ascending=False)
+st.dataframe(coefs.head(10).reset_index().rename(columns={'index': 'Feature', 0: 'Hệ số'}))
+
+# --- Kết luận ---
+st.subheader("📌 Kết luận & Nhận định")
+
+most_impact = coefs.abs().idxmax()
+st.markdown(f"""
+✅ **Yếu tố ảnh hưởng mạnh nhất:** `{most_impact}`  
+✅ **R² = {r2:.2f}** ⇒ {"Mô hình dự báo tốt." if r2 > 0.7 else "Mô hình chưa lý tưởng, cần cải tiến thêm."}
+
+👉 Bạn có thể cải tiến bằng cách thử thêm các mô hình khác như Random Forest, XGBoost hoặc thêm feature mới (ví dụ: giá, thời tiết...).
+""")
